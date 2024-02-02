@@ -5,14 +5,15 @@ go 1.21.5
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gocolly/colly/v2 v2.1.0
+	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/lib/pq v1.10.9
 	golang.org/x/crypto v0.18.0
-	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/a-h/templ v0.2.543
 )
 
 require (
-	github.com/PuerkitoBio/goquery v1.5.1 // indirect
-	github.com/andybalholm/cascadia v1.2.0 // indirect
+	github.com/PuerkitoBio/goquery v1.8.1 // indirect
+	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/antchfx/htmlquery v1.2.3 // indirect
 	github.com/antchfx/xmlquery v1.2.4 // indirect
 	github.com/antchfx/xpath v1.1.8 // indirect

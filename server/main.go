@@ -9,11 +9,14 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"golang.org/x/crypto/bcrypt"
-	"github.com/golang-jwt/jwt/v5"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gocolly/colly/v2"
 	_ "github.com/lib/pq"
+	"github.com/vhladko/books/jwt"
+	templRender "github.com/vhladko/books/render"
+	"github.com/vhladko/books/templates"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const goodreadsUrl = "https://goodreads.com/book/isbn/"
@@ -42,9 +45,18 @@ func main() {
 	connectToDatabase()
 	r := gin.Default()
 
-	r.GET("/book/isbn/:isbn", handleGetBookByIsbn)
-	r.GET("/book/id/:id", handleGetBookById)
+	r.HTMLRender = templRender.Default;
+
+	r.GET("/", handleMain)
+	r.GET("/book/isbn/:isbn", handleAuthGuard, handleGetBookByIsbn)
+	r.GET("/book/id/:id", handleAuthGuard, handleGetBookById)
+	r.POST("/login", handleLogin)
+	r.GET("/logout", handleLogout)
 	r.Run()
+}
+
+func handleMain(c *gin.Context) {
+	c.HTML(http.StatusOK,"", templates.Home())
 }
 
 func handleGetBookByIsbn(c *gin.Context) {
@@ -266,15 +278,48 @@ type User struct {
 	Username  string
 }
 
-func createUser(email string, username string, password string) (User, error) {
-	user := User{Email: email, Username: username}
+func handleRegister(c *gin.Context) {
+	email := c.PostForm("email")
+	password := c.PostForm("password")
+
+	_, err := getUserByEmail(email)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusBadRequest, gin.H{"err": "user with such email already exists"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"err": "was not able to connect to database"})
+		}
+	}
+
+	user, err := createUser(email, password)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"err": "was not able to create a user"})
+	}
+
+	expirationTime := jwt.NewNumericDate(time.Now().Add(24 * time.Hour))
+	token := createToken(user, expirationTime)
+
+	signedString, err := signToken(token)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"err": "wasnt able to generate token"})
+	}
+
+	c.SetCookie("token", signedString, int(expirationTime.Unix()), "/", "", false, true)
+	c.Redirect(http.StatusFound, "/")
+}
+
+func createUser(email string, password string) (User, error) {
+	user := User{Email: email}
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return user, err
 	}
 
-	insertUserQuery := `insert into "public"."author"(email, username, password ) values($1, $2, $3) returning id, created_at, email, username`
-	err = db.QueryRow(insertUserQuery, user.Email, user.Username, bytes).Scan(&user.Id, &user.CreatedAt, &user.Email, &user.Username)
+	insertUserQuery := `insert into "public"."author"(email, password ) values($1, $2) returning id, created_at, email`
+	err = db.QueryRow(insertUserQuery, user.Email, user.Username, bytes).Scan(&user.Id, &user.CreatedAt, &user.Email)
 
 	if err != nil {
 		return user, err
@@ -284,7 +329,6 @@ func createUser(email string, username string, password string) (User, error) {
 }
 
 func getUserByEmail(email string) (User, error) {
-
 	var user = User{}
 
 	err := db.
@@ -298,11 +342,21 @@ func getUserByEmail(email string) (User, error) {
 	}
 }
 
-type MyClaim struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	jwt.RegisteredClaims
+func getUserByUsername(username string) (User, error) {
+	var user = User{}
+
+	err := db.
+		QueryRow(`select id, created_at, email, username, password from "public"."user" where "username"=$1`, username).
+		Scan(&user.Id, &user.CreatedAt, &user.Email, &user.Username, &user.Password)
+
+	if err != nil {
+		return user, err
+	} else {
+		return user, nil
+	}
+
 }
+
 
 func handleLogin(c *gin.Context) {
 	email := c.PostForm("email")
@@ -322,75 +376,37 @@ func handleLogin(c *gin.Context) {
 		return
 	}
 
+	expirationTime := jwt.GetExparationTime()
+	token := jwt.CreateToken(user, expirationTime)
 
-	expirationTime := jwt.NewNumericDate(time.Now().Add(24 * time.Hour))
-	token := createToken(user, expirationTime)
-
-	signedString, err := signToken(token)
+	signedString, err := jwt.SignToken(token)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"err": "wasnt able to generate token"})
-		return
 	}
 
 	c.SetCookie("token", signedString, int(expirationTime.Unix()), "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"msg": "login successful"})
 }
 
-var secretKey = "secret-key"
-
-func createToken(user User, expirationTime *jwt.NumericDate) *jwt.Token {
-	claims := MyClaim{
-		Email:    user.Email,
-		Username: user.Username,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: expirationTime,
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	return token;
-}
-
-func signToken(token *jwt.Token) (string, error) {
-	signedString, err := token.SignedString(secretKey)
-
-	return signedString, err
-}
-
-func verifyToken(tokenString string) error {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	if !token.Valid {
-		return fmt.Errorf("invalid token")
-	}
-
-	return nil
-
-}
 
 func handleLogout(c *gin.Context) {
-
+	c.SetCookie("token", "", -1, "/", "", false, true)
+	c.Redirect(http.StatusFound, "/login")
 }
 
 func handleAuthGuard(c *gin.Context) {
 	token, err := c.Cookie("token")
 
-	if err != nil {
+	if err != nil || token == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"err": "wasnt able to find token"})
 	}
 
+	err = jwt.VerifyToken(token)
 
-	fmt.Print(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"err": "invalid token"})
+	}
 
-
+	c.Next()
 }
