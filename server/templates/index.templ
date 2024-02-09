@@ -1,6 +1,8 @@
 package templates
 
-templ Home() {
+import "github.com/vhladko/books/models"
+
+templ Home(user models.User) {
 	<html>
 		<head>
 			<meta charset="UTF-8"/>
@@ -11,6 +13,23 @@ templ Home() {
 			<header>
 				<h1>books</h1>
 			</header>
+			<main>
+			Hello { user.Email }
+			<h2>Your books</h2>
+			<ul>
+			</ul>
+
+			<h2>Add book</h2>
+			<form hx-get="/book" hx-target="#test">
+				<input type="text" name="isbn" placeholder="Enter an isbn" />
+				<button>Add</button>
+			</form>
+
+			<div id="test">
+			</div>
+			</main>
+
+			<script src="/assets/js/htmx.min.js"></script>
 		</body>
 	</html>
 }

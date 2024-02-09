@@ -2,20 +2,16 @@ package jwt
 
 import (
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/vhladko/books/models"
 )
 
-var secretKey = "secret-key"
+var secretKey = []byte("secret-key")
 
-type UserClaims struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	jwt.RegisteredClaims
-}
-
-func CreateToken(user User, expirationTime *jwt.NumericDate) *jwt.Token {
-	claims := UserClaims{
+func CreateToken(user models.User, expirationTime *jwt.NumericDate) *jwt.Token {
+	claims := models.UserClaims{
 		Email:    user.Email,
 		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -34,6 +30,14 @@ func SignToken(token *jwt.Token) (string, error) {
 	signedString, err := token.SignedString(secretKey)
 
 	return signedString, err
+}
+
+func ParseToken(token string) *models.UserClaims {
+	parsedAccessToken, _ := jwt.ParseWithClaims(token, &models.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+
+	return parsedAccessToken.Claims.(*models.UserClaims)
 }
 
 func VerifyToken(tokenString string) error {
