@@ -7,7 +7,7 @@ import (
 func GetAuthorByName(name string) (m.Author, error) {
 	var author = m.Author{}
 	err := DB.
-		QueryRow(`select id from "public"."author" where "name"=$1`, name).
+		QueryRow(`select id from author where name=$1`, name).
 		Scan(&author.Id)
 
 	if err != nil {
@@ -19,7 +19,7 @@ func GetAuthorByName(name string) (m.Author, error) {
 
 func AddAuthor(name string) (m.Author, error) {
 	var author = m.Author{}
-	insertBookQuery := `insert into "public"."author"("name") values($1) returning id, created_at, name`
+	insertBookQuery := `insert into author(name) values($1) returning id, created_at, name`
 	err := DB.QueryRow(insertBookQuery, name).Scan(&author.Id, &author.CreatedAt, &author.Name)
 
 	if err != nil {

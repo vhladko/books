@@ -23,3 +23,9 @@ func GetBookByIsbn(isbn string) (m.Book, error) {
 
 	return book, err
 }
+
+func GetAllBooks() []m.Book {
+	books := r.GetAllBooks()
+
+	return books;
+}

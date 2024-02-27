@@ -27,7 +27,6 @@ func GetBookFromGoodreads(isbn string) (m.Book, error) {
 	})
 
 	c.OnHTML(".BookPageMetadataSection", func(e *colly.HTMLElement) {
-		book.Description = e.ChildText("[data-testid='description']")
 		pagesFormat := e.ChildText("[data-testid='pagesFormat']")
 		pagesString := strings.Map(helpers.FilterOnlyDigits, pagesFormat)
 		totalPages, err := strconv.ParseInt(pagesString, 10, 16)
@@ -36,10 +35,17 @@ func GetBookFromGoodreads(isbn string) (m.Book, error) {
 		} else {
 			book.TotalPages = int16(totalPages)
 		}
-
 	})
 
-	c.OnHTML(".ContributorLink__name", func(e *colly.HTMLElement) {
+	c.OnHTML("[data-testid='description'] .Formatted", func(e *colly.HTMLElement) {
+		desc, err := e.DOM.Html()
+		if(err != nil) {
+			book.Description = e.Text
+		}
+		book.Description = desc
+	})
+
+	c.OnHTML(".AuthorPreview .ContributorLink__name", func(e *colly.HTMLElement) {
 		book.AuthorName = e.Text
 	})
 

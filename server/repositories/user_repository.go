@@ -5,7 +5,7 @@ import (
 )
 
 func AddUser(user m.User) (m.User, error) {
-	insertUserQuery := `insert into "public"."user_"(email, password ) values($1, $2) returning id, created_at, email`
+	insertUserQuery := `insert into user_(email, password ) values($1, $2) returning id, created_at, email`
 	err := DB.QueryRow(insertUserQuery, user.Email, user.Password).Scan(&user.Id, &user.CreatedAt, &user.Email)
 
 	if err != nil {
@@ -19,7 +19,7 @@ func GetUserByEmail(email string) (m.User, error) {
 	var user = m.User{}
 
 	err := DB.
-		QueryRow(`select id, created_at, email, username, password from "public"."user_" where "email"=$1`, email).
+		QueryRow(`select id, created_at, email, username, password from user_ where email=$1`, email).
 		Scan(&user.Id, &user.CreatedAt, &user.Email, &user.Username, &user.Password)
 
 	if err != nil {
@@ -33,7 +33,7 @@ func GetUserByUsername(username string) (m.User, error) {
 	var user = m.User{}
 
 	err := DB.
-		QueryRow(`select id, created_at, email, username, password from "public"."user_" where "username"=$1`, username).
+		QueryRow(`select id, created_at, email, username, password from user_ where username=$1`, username).
 		Scan(&user.Id, &user.CreatedAt, &user.Email, &user.Username, &user.Password)
 
 	if err != nil {
@@ -41,4 +41,38 @@ func GetUserByUsername(username string) (m.User, error) {
 	} else {
 		return user, nil
 	}
+}
+
+func GetUserBooks(user m.User) []m.Book {
+	var books []m.Book
+
+	rows, err := DB.Query(`select b.id, b.isbn, b.created_at, b.title, b.author_id, b.total_pages, b.description, b.preview_url, b.author_name from user_book ub where user_id=$1 inner join book b on ub.book_id = b.id`, user.Id)
+
+
+	if err != nil {
+		return books
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var book m.Book
+
+		rows.Scan(&book.Id, &book.Isbn, &book.CreatedAt, &book.Title, &book.AuthorId, &book.TotalPages, &book.Description, &book.PreviewUrl, &book.AuthorName)
+
+		books = append(books, book)
+	}
+
+	return books
+}
+
+func AddBookToUser(user m.User, book m.Book) error {
+	insertUserQuery := `insert into user_book(user_id, book_id, status, total_pages_read ) values($1, $2, "none", 0)`
+	err := DB.QueryRow(insertUserQuery, user.Email, user.Password).Scan(&user.Id, &book.Id)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
