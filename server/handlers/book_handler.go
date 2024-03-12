@@ -22,7 +22,7 @@ func HandleGetBookByIsbn(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"err": "Book not found"})
 		return
 	}
-	c.JSON(http.StatusOK, book)
+	c.JSON(http.StatusOK, gin.H{"book": book})
 }
 
 func HandleGetBookById(c *gin.Context) {
@@ -35,7 +35,7 @@ func HandleGetBookById(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, book)
+	c.JSON(http.StatusOK, gin.H{"book": book})
 }
 
 func HandleGetBook(c *gin.Context) {

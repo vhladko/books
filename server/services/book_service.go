@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+
 	m "github.com/vhladko/books/models"
 	r "github.com/vhladko/books/repositories"
 )
@@ -11,6 +13,7 @@ func GetBookByIsbn(isbn string) (m.Book, error) {
 		return book, nil
 	}
 
+	fmt.Print("started from good reads")
 	book, err = GetBookFromGoodreads(isbn)
 
 	if err != nil {

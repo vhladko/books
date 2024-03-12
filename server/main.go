@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	r "github.com/vhladko/books/repositories"
-	handlers "github.com/vhladko/books/apihandlers"
+	handlers "github.com/vhladko/books/handlers"
 )
 
 var DB *sql.DB
@@ -16,11 +16,13 @@ func main() {
 	r := gin.Default()
 
 
-	r.GET("/book/isbn/:isbn", handlers.HandleAuthGuard, handlers.HandleGetBookByIsbn)
-	r.GET("/book/id/:id", handlers.HandleAuthGuard, handlers.HandleGetBookById)
-	r.POST("/login", handlers.HandleLogin)
-	r.GET("/logout", handlers.HandleLogout)
-	r.POST("/register", handlers.HandleRegister)
+	r.GET("/api/book/isbn/:isbn", handlers.HandleAuthGuard, handlers.HandleGetBookByIsbn)
+	r.GET("/api/book/id/:id", handlers.HandleAuthGuard, handlers.HandleGetBookById)
+	r.POST("/api/login", handlers.HandleLogin)
+	r.GET("/api/logout", handlers.HandleLogout)
+	r.POST("/api/register", handlers.HandleRegister)
+	r.GET("/api/books", handlers.HandleAuthGuard, handlers.HandleGetUserBooks)
+	r.POST("/api/book", handlers.HandleAuthGuard, handlers.HandleAddBookToUser)
 	r.Run()
 }
 

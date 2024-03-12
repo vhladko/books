@@ -66,13 +66,9 @@ func GetUserBooks(user m.User) []m.Book {
 	return books
 }
 
-func AddBookToUser(user m.User, book m.Book) error {
+func AddBookToUser(userId string, bookId string) error {
 	insertUserQuery := `insert into user_book(user_id, book_id, status, total_pages_read ) values($1, $2, "none", 0)`
-	err := DB.QueryRow(insertUserQuery, user.Email, user.Password).Scan(&user.Id, &book.Id)
-
-	if err != nil {
-		return err
-	}
+	DB.QueryRow(insertUserQuery, userId, bookId)
 
 	return nil
 }

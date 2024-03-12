@@ -33,3 +33,17 @@ func GetUserFromToken(token string) m.User {
 
 	return user
 }
+
+func GetUserFromGinContext()
+
+func GetUserBooks(user m.User) []m.Book {
+	books := r.GetUserBooks(user)
+
+	return books;
+}
+
+func AddBookToUser(user m.User, bookId string) {
+	r.AddBookToUser(user.Id, bookId)
+
+	return
+}

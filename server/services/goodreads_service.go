@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -53,6 +54,7 @@ func GetBookFromGoodreads(isbn string) (m.Book, error) {
 		book.Title = e.Text
 	})
 
+	fmt.Print(url)
 	c.Visit(url)
 
 	return book, err
